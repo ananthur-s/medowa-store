@@ -630,72 +630,63 @@ function HomePage() {
 
       <main>
 
-        <section className="hero hero-cinematic" id="home">
-
-          <div className="hero-copy">
-
-            <span className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> INTRODUCING THE NOVA SERIES</span>
+        <section className="hero hero-video-landing" id="home">
+          <div className="hero-video-copy">
+            <span className="eyebrow hero-eyebrow">
+              <span className="eyebrow-line" /> INTRODUCING THE NOVA SERIES
+            </span>
 
             <h1 key={banner?.title || "default-hero"}>
-
-              {banner?.title || <>Technology,<br /><span>beautifully beyond.</span></>}
-
+              {banner?.title || (
+                <>
+                  Experience the
+                  <br />
+                  Future with
+                  <br />
+                  <span>NovaTech.</span>
+                </>
+              )}
             </h1>
 
-            <p>{banner?.subtitle || "Thoughtful design. Remarkable performance. Technology that moves with you."}</p>
+            <p>
+              {banner?.subtitle ||
+                "Thoughtfully designed technology. Made for your everyday."}
+            </p>
 
             <div className="hero-buttons">
-
-              <Link className="primary-button" to="/shop">{banner?.button_text || "Explore the collection"} <span>↗</span></Link>
-
-              <Link className="secondary-button" to="/category/smartphones">Meet Nova Pro <span>→</span></Link>
-
+              <Link className="primary-button" to={banner?.button_link || "/shop"}>
+                {banner?.button_text || "Shop now"} <span>↗</span>
+              </Link>
+              <Link className="secondary-button" to="/category/smartphones">
+                Meet Nova Pro <span>→</span>
+              </Link>
             </div>
-
-            <div className="hero-note"><span className="status-dot" /> Designed around your everyday</div>
-
           </div>
 
-
-
-          <div className="hero-visual">
-
-            <div className="hero-glow" />
-
-            <div className="hero-orbit orbit-one" />
-
-            <div className="hero-orbit orbit-two" />
-
-            <div className="hero-product-stage">
-
-              <img
-
-                src={heroImage}
-
-                alt={banner?.title || featuredProduct?.name || "NovaTech product"}
-
-                className="hero-phone"
-
-                onError={(event) => {
-
-                  if (!event.currentTarget.src.endsWith("/images/phn1.jpg")) event.currentTarget.src = "/images/phn1.jpg";
-
-                }}
-
-              />
-
+          <div className="hero-video-frame">
+            <video
+              className="hero-product-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="NovaTech product showcase video"
+              poster="/images/phn1.jpg"
+            >
+              <source src="/videos/novatech-hero.mp4" type="video/mp4" />
+            </video>
+            <div className="hero-video-caption">
+              <span>THE NOVA COLLECTION</span>
+              <strong>Designed to inspire.</strong>
             </div>
-
-            <div className="floating-label"><span>01 / NOVA SERIES</span><strong>Designed to inspire.</strong></div>
-
-            <span className="hero-side-label">TECHNOLOGY, REIMAGINED</span>
-
           </div>
 
-          <a className="hero-scroll" href="#categories"><span /> Scroll to explore</a>
-
-          <div className="hero-index" aria-hidden="true">01 — 04</div>
-
+          <div className="hero-video-footer">
+            <span>THOUGHTFULLY DESIGNED TECHNOLOGY</span>
+            <a href="#categories">Scroll to explore ↓</a>
+            <span>01 — NOVATECH</span>
+          </div>
         </section>
 
 
