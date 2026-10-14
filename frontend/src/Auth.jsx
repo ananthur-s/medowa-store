@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
 
-const API_URL = "http://127.0.0.1:8000/api/auth";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+
+const API_URL = `${API_BASE_URL}/api/auth`;
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -36,16 +40,30 @@ function Auth() {
       const data = await response.json();
 
       if (!response.ok) {
-        const errors = Object.values(data).flat().join(" ");
+        const errors =
+          typeof data === "object" && data !== null
+            ? Object.values(data).flat().join(" ")
+            : "";
+
         throw new Error(errors || "Something went wrong.");
       }
 
+      if (!data.token) {
+        throw new Error("Login succeeded, but no authentication token was returned.");
+      }
+
       localStorage.setItem("authToken", data.token);
-      localStorage.setItem("authUser", JSON.stringify(data.user));
+
+      if (data.user) {
+        localStorage.setItem("authUser", JSON.stringify(data.user));
+      }
 
       navigate("/profile");
     } catch (error) {
-      setMessage(error.message || "Unable to connect to the server.");
+      console.error("Authentication error:", error);
+      setMessage(
+        error.message || "Unable to connect to the server. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -94,6 +112,7 @@ function Auth() {
           <label htmlFor="username">Username</label>
           <input
             id="username"
+            name="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             placeholder="Enter your username"
@@ -106,6 +125,7 @@ function Auth() {
               <label htmlFor="email">Email address</label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -119,6 +139,7 @@ function Auth() {
           <label htmlFor="password">Password</label>
           <input
             id="password"
+            name="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -128,7 +149,7 @@ function Auth() {
           />
 
           {message && (
-            <p className="auth-message" role="status">
+            <p className="auth-message" role="alert">
               {message}
             </p>
           )}

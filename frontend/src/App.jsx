@@ -1,48 +1,79 @@
 
+import { useEffect, useState } from "react";
+import { Link, BrowserRouter, Routes, Route } from "react-router-dom";
 import Auth from "./Auth";
 import Profile from "./Profile";
-import { useEffect, useState } from 'react';
-import './App.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import ProductDetail from './ProductDetail';
+import ProductDetail from "./ProductDetail";
+import "./App.css";
 
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+
+const API_URL = `${API_BASE_URL}/api`;
 
 function App() {
   const [products, setProducts] = useState([]);
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadHomepage() {
       try {
+        setLoading(true);
+        setError("");
+
         const [productResponse, bannerResponse] = await Promise.all([
           fetch(`${API_URL}/products/`),
           fetch(`${API_URL}/banners/`),
         ]);
 
-        if (!productResponse.ok || !bannerResponse.ok) {
-          throw new Error('Could not load website data.');
+        if (!productResponse.ok) {
+          throw new Error("Could not load products from the server.");
         }
 
         const productData = await productResponse.json();
-        const bannerData = await bannerResponse.json();
 
-        setProducts(productData);
-        setBanners(bannerData);
+        let bannerData = [];
+        if (bannerResponse.ok) {
+          bannerData = await bannerResponse.json();
+        }
+
+        if (!Array.isArray(productData)) {
+          throw new Error("The products API returned an unexpected response.");
+        }
+
+        if (!cancelled) {
+          setProducts(productData.filter((product) => product.is_active !== false));
+          setBanners(Array.isArray(bannerData) ? bannerData : []);
+        }
       } catch (err) {
-        setError('Unable to load products. Please check that Django is running.');
-        console.error(err);
+        console.error("Homepage API error:", err);
+
+        if (!cancelled) {
+          setError(
+            "Unable to load products. Please check your internet connection and try again."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadHomepage();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const banner = banners[0];
+
   const featuredProduct =
     products.find((product) => product.is_featured) || products[0];
 
@@ -50,19 +81,32 @@ function App() {
     ...new Map(
       products
         .filter((product) => product.category)
-        .map((product) => [
-          product.category.id,
-          product.category,
-        ])
+        .map((product) => [product.category.id, product.category])
     ).values(),
   ];
 
   const formatPrice = (price) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       maximumFractionDigits: 0,
     }).format(Number(price));
+
+  function getProductImage(product) {
+    if (product.name?.toLowerCase().includes("nova pro")) {
+      return "/images/novapro.jpg";
+    }
+
+    return product.image || "/images/novapro.jpg";
+  }
+
+  function getBannerImage() {
+    if (featuredProduct) {
+      return getProductImage(featuredProduct);
+    }
+
+    return "/images/phn1.jpg";
+  }
 
   return (
     <div className="app">
@@ -71,9 +115,9 @@ function App() {
       </div>
 
       <header className="navbar">
-        <a className="brand" href="#home">
+        <Link className="brand" to="/">
           nova<span>tech.</span>
-        </a>
+        </Link>
 
         <nav className="nav-links">
           <a href="#products">Shop</a>
@@ -82,9 +126,15 @@ function App() {
         </nav>
 
         <div className="nav-actions">
-          <a href="#products" aria-label="Search products">⌕</a>
-          <a href="#account" aria-label="My account">♙</a>
-          <a href="#products" aria-label="Shopping bag">Bag</a>
+          <a href="#products" aria-label="Search products">
+            ⌕
+          </a>
+          <Link to="/auth" aria-label="My account">
+            ♙
+          </Link>
+          <a href="#products" aria-label="Shopping bag">
+            Bag
+          </a>
         </div>
       </header>
 
@@ -94,9 +144,7 @@ function App() {
             <span className="eyebrow">THE NEXT GENERATION</span>
 
             <h1>
-              {banner ? (
-                banner.title
-              ) : (
+              {banner?.title || (
                 <>
                   A little more
                   <br />
@@ -107,14 +155,15 @@ function App() {
 
             <p>
               {banner?.subtitle ||
-                'Discover technology that brings beautiful design and everyday performance together.'}
+                "Discover technology that brings beautiful design and everyday performance together."}
             </p>
 
             <a
               className="primary-button"
-              href={banner?.button_link || '#products'}
+              href={banner?.button_link || "#products"}
             >
-              {banner?.button_text || 'Explore the collection'} <span>↗</span>
+              {banner?.button_text || "Explore the collection"}{" "}
+              <span>↗</span>
             </a>
 
             <div className="hero-note">
@@ -127,13 +176,16 @@ function App() {
             <div className="hero-orbit orbit-one" />
             <div className="hero-orbit orbit-two" />
 
-            {(banner?.image || featuredProduct?.image) && (
-              <img
-                src={banner?.image || featuredProduct?.image}
-                alt={banner?.title || featuredProduct?.name || 'Featured product'}
-                className="hero-phone"
-              />
-            )}
+            <img
+              src={banner?.image || getBannerImage()}
+              onError={(event) => {
+                if (event.currentTarget.src !== window.location.origin + getBannerImage()) {
+                  event.currentTarget.src = getBannerImage();
+                }
+              }}
+              alt={banner?.title || featuredProduct?.name || "NovaTech product"}
+              className="hero-phone"
+            />
 
             <div className="floating-label">
               <span>01 / NOVA SERIES</span>
@@ -148,6 +200,7 @@ function App() {
               <span className="eyebrow">FIND YOUR NEXT FAVOURITE</span>
               <h2>Explore by category</h2>
             </div>
+
             <a href="#products" className="text-link">
               View everything ↗
             </a>
@@ -161,7 +214,7 @@ function App() {
                 key={category.id}
               >
                 <span className="category-icon">
-                  {['▯', '▱', '◉', '◷'][index % 4]}
+                  {["▯", "▱", "◉", "◷"][index % 4]}
                 </span>
                 <span>{category.name}</span>
                 <span className="category-arrow">↗</span>
@@ -180,6 +233,7 @@ function App() {
               <span className="eyebrow">CURATED FOR YOU</span>
               <h2>Meet your next favourite.</h2>
             </div>
+
             <a href="#products" className="text-link">
               Shop all products ↗
             </a>
@@ -187,7 +241,17 @@ function App() {
 
           {loading && <p>Loading products...</p>}
 
-          {error && <p role="alert">{error}</p>}
+          {error && (
+            <p role="alert">
+              {error}
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                Try again
+              </button>
+            </p>
+          )}
 
           {!loading && !error && products.length === 0 && (
             <p>No products available at the moment.</p>
@@ -195,30 +259,41 @@ function App() {
 
           <div className="product-grid">
             {products.map((product) => (
-<article
-  className="product-card"
-  key={product.id}
-  onClick={() => {
-    window.location.href = `/products/${product.id}`;
-  }}
-  style={{ cursor: 'pointer' }}
->                <div className="product-image-wrap">
+              <article
+                className="product-card"
+                key={product.id}
+                onClick={() => {
+                  window.location.href = `/products/${product.id}`;
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="product-image-wrap">
                   {product.is_featured && (
                     <span className="product-tag">FEATURED</span>
                   )}
 
                   <img
-                    src={product.image}
+                    src={getProductImage(product)}
                     alt={product.name}
                     loading="lazy"
+                    onError={(event) => {
+                      if (
+                        !event.currentTarget.src.endsWith("/images/novapro.jpg")
+                      ) {
+                        event.currentTarget.src = "/images/novapro.jpg";
+                      }
+                    }}
                   />
 
                   <button
                     className="quick-add"
                     type="button"
-                    onClick={() =>
-                      alert(`${product.name} selected! Shopping cart coming soon.`)
-                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      alert(
+                        `${product.name} selected! Shopping cart coming soon.`
+                      );
+                    }}
                     aria-label={`Select ${product.name}`}
                   >
                     +
@@ -227,7 +302,7 @@ function App() {
 
                 <div className="product-info">
                   <span className="product-category">
-                    {product.category?.name || 'Technology'}
+                    {product.category?.name || "Technology"}
                   </span>
                   <h3>{product.name}</h3>
                   <strong>{formatPrice(product.price)}</strong>
@@ -240,30 +315,34 @@ function App() {
         <section className="story-banner" id="story">
           <div>
             <span className="eyebrow">TECHNOLOGY, THOUGHTFULLY MADE</span>
-            <h2>Less noise.<br />More possibility.</h2>
+            <h2>
+              Less noise.
+              <br />
+              More possibility.
+            </h2>
             <p>
-              The little details make all the difference.
-              Find technology that feels right for you.
+              The little details make all the difference. Find technology that
+              feels right for you.
             </p>
             <a className="light-button" href="#products">
               Find your device ↗
             </a>
           </div>
+
           <div className="story-decoration">n.</div>
         </section>
       </main>
 
       <footer className="footer" id="account">
-        <a className="brand" href="#home">
+        <Link className="brand" to="/">
           nova<span>tech.</span>
-        </a>
+        </Link>
         <p>Good technology. Better everyday.</p>
         <span>© 2026 NovaTech. Created for the Medowa assessment.</span>
       </footer>
     </div>
   );
 }
-
 
 function AppRoutes() {
   return (
@@ -272,11 +351,10 @@ function AppRoutes() {
         <Route path="/" element={<App />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/auth" element={<Auth />} />
-<Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default AppRoutes;
-

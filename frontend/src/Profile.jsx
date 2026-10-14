@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Profile.css";
 
-const API_URL = "http://127.0.0.1:8000/api/auth";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+
+const API_URL = `${API_BASE_URL}/api/auth`;
 
 function Profile() {
   const [user, setUser] = useState(null);
@@ -12,11 +16,13 @@ function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadProfile() {
       const token = localStorage.getItem("authToken");
 
       if (!token) {
-        navigate("/auth");
+        navigate("/auth", { replace: true });
         return;
       }
 
@@ -30,20 +36,37 @@ function Profile() {
         if (!response.ok) {
           localStorage.removeItem("authToken");
           localStorage.removeItem("authUser");
-          navigate("/auth");
+
+          if (!cancelled) {
+            navigate("/auth", { replace: true });
+          }
           return;
         }
 
         const data = await response.json();
-        setUser(data);
-      } catch {
-        setError("Unable to connect to the server. Please try again.");
+
+        if (!cancelled) {
+          setUser(data);
+          setError("");
+        }
+      } catch (err) {
+        console.error("Profile loading error:", err);
+
+        if (!cancelled) {
+          setError("Unable to connect to the server. Please try again.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   async function handleLogout() {
@@ -58,10 +81,12 @@ function Profile() {
           },
         });
       }
+    } catch (err) {
+      console.error("Logout request failed:", err);
     } finally {
       localStorage.removeItem("authToken");
       localStorage.removeItem("authUser");
-      navigate("/auth");
+      navigate("/auth", { replace: true });
     }
   }
 
@@ -75,15 +100,19 @@ function Profile() {
         <Link to="/" className="profile-brand">
           NOVATECH<span>.</span>
         </Link>
-        <Link to="/" className="profile-home">Home</Link>
+
+        <Link to="/" className="profile-home">
+          Home
+        </Link>
       </header>
 
       <section className="profile-card">
         <div className="profile-avatar">
-          {user?.username?.charAt(0).toUpperCase()}
+          {user?.username?.charAt(0).toUpperCase() || "U"}
         </div>
 
         <h1>My Account</h1>
+
         {error ? (
           <p role="alert">{error}</p>
         ) : user ? (
@@ -93,11 +122,19 @@ function Profile() {
             </p>
 
             <div className="profile-info">
-              <p><strong>Username:</strong> {user.username}</p>
-              <p><strong>Email:</strong> {user.email || "Not provided"}</p>
+              <p>
+                <strong>Username:</strong> {user.username}
+              </p>
+              <p>
+                <strong>Email:</strong> {user.email || "Not provided"}
+              </p>
             </div>
 
-            <button className="profile-logout" onClick={handleLogout}>
+            <button
+              className="profile-logout"
+              type="button"
+              onClick={handleLogout}
+            >
               Log out
             </button>
           </>
